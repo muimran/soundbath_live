@@ -1,0 +1,91 @@
+/******************************************************************************
+START Glitch hello-app default styles
+... [previous styles]
+******************************************************************************/
+
+body {
+  font-family: HK Grotesk;
+  background-color: var(--color-bg);
+}
+
+/* Page structure */
+.wrapper {
+  min-height: var(--wrapper-height);
+  display: grid;
+  place-items: center;
+  margin: 0 1rem;
+}
+.content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Title styling */
+.title {
+  font-family: Helvetica;
+  font-style: normal;
+  font-weight: bold;
+  font-size: 75px;
+  line-height: 150%;
+  margin: 0;
+  color:6B6462; /* Adjust color as needed */
+}
+
+#map {
+  height: 80vh;
+  width: 100%;
+  animation: fadeInScale 1.5s ease-in-out; /* Apply combined animation */
+  border-radius: 10px; /* Rounded corners */
+  /* other styles... */
+}
+
+#rainfall-info {
+    position: absolute;
+    top: 822px;
+    right: 120px;
+    width: 200px;
+    padding: 10px;
+    border-radius: 5px;
+    font-family: 'Roboto', sans-serif;
+    font-weight: bold;
+    color: #6B6462;
+    z-index: 1000;
+    animation: fadeInRight 2s ease-in-out 0.5s; /* Updated animation */
+    opacity: 0; /* Start from invisible */
+    animation: fadeInRight 2s ease-in-out 0.5s forwards; /* Updated animation with forwards fill-mode */
+    opacity: 0; /* Start from invisible */
+}
+
+#total-rainfall, #stations-with-rain {
+    margin: 5px 0;
+}
+
+/* Fade-in from the right animation */
+@keyframes fadeInRight {
+    from {
+        opacity: 0;
+        transform: translateX(20px); /* Start 20px to the right */
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0); /* End at current position */
+    }
+}
+
+/* Combined fade-in and scale animation for the map */
+@keyframes fadeInScale {
+    from {
+        opacity: 0;
+        transform: scale(0.95); /* Start from a slightly smaller size */
+    }
+    to {
+        opacity: 1;
+        transform: scale(1); /* Scale to normal size */
+    }
+}
+
+/******************************************************************************
+END Glitch hello-app default styles
+******************************************************************************/
