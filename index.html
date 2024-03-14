@@ -3,16 +3,17 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="icon" href="https://glitch.com/favicon.ico" />
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
-
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+<!-- this is the leaflet map which I have commented out -->
+    <!-- <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
     crossorigin=""/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-    crossorigin=""></script>
-  
+    crossorigin=""></script> -->
+    
+    <link href="https://api.mapbox.com/mapbox-gl-js/v3.2.0/mapbox-gl.css" rel="stylesheet">
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.2.0/mapbox-gl.js"></script>
     <title>All Rain Gauges</title>
     <link rel="stylesheet" href="style.css" />
     <script src="script.js" defer></script>
@@ -21,23 +22,30 @@
   <body>
     <div class="wrapper">
       <div class="content" role="main">
-        <h1 class="title">All Rain Gauges in England</h1>
+        <!-- <h1 class="title">Rain in Britain</h1> -->
 
         <!-- New div for displaying rainfall info -->
-        <div id="rainfall-info">
+        <!-- <div id="rainfall-info">
           <div id="total-rainfall">Total Rainfall: <span id="rainfall-value">0</span> mm</div>
           <div id="stations-with-rain">Stations with Rain: <span id="stations-value">0</span></div>
-        </div>
+        </div> -->
 
         <div id="map"></div>
+      <script>
+      mapboxgl.accessToken = 'pk.eyJ1IjoiZG93ZWxsYWYiLCJhIjoiY2x0cjJjc2VqMGVtZzJrbnYwZjcxczdkcCJ9.ljRbHHEIuM4J40yUamM8zg';
+        const map = new mapboxgl.Map({
+            container: 'map', // container ID
+            style: 'mapbox://styles/dowellaf/cltr2h0h0007y01p7akad96el', // my style
+            center: [-4.880576, 54.336061], // starting position
+            zoom: 0.75 // starting zoom
+        });
+      </script>
       </div>
     </div>
     
     <footer class="footer">
-      <div class="links"></div>
-      <a class="btn--remix" target="_top" href="https://glitch.com/edit/#!/remix/glitch-hello-website">
-        <img src="https://cdn.glitch.com/605e2a51-d45f-4d87-a285-9410ad350515%2FLogo_Color.svg?v=1618199565140" alt=""/>
-      </a>
     </footer>
+  
+    
   </body>
 </html>

@@ -1,11 +1,7 @@
-/******************************************************************************
-START Glitch hello-app default styles
-... [previous styles]
-******************************************************************************/
 
 body {
   font-family: HK Grotesk;
-  background-color: var(--color-bg);
+  background-color: black;
 }
 
 /* Page structure */
@@ -34,12 +30,18 @@ body {
 }
 
 #map {
-  height: 80vh;
-  width: 100%;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 100%; /* Fill the entire width of the viewport */
+  height: 100%; /* Fill the entire height of the viewport */
   animation: fadeInScale 1.5s ease-in-out; /* Apply combined animation */
-  border-radius: 10px; /* Rounded corners */
-  /* other styles... */
+  border-radius: 0; /* Remove border radius */
 }
+
+
 
 #rainfall-info {
     position: absolute;
@@ -85,7 +87,3 @@ body {
         transform: scale(1); /* Scale to normal size */
     }
 }
-
-/******************************************************************************
-END Glitch hello-app default styles
-******************************************************************************/
