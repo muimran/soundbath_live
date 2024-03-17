@@ -1,9 +1,6 @@
 import requests
 import csv
-from opencage.geocoder import OpenCageGeocode
-import time
 from datetime import datetime
-
 
 # Function to fetch station data with coordinates for England
 def fetch_station_data_eng():
@@ -13,9 +10,9 @@ def fetch_station_data_eng():
     if response.status_code == 200:
         data = response.json()
         for station in data['items']:
-            if station.get('lat') is not None and station.get('long') is not None:
+            if station.get('latitude') is not None and station.get('longitude') is not None:
                 eng_station_data[station.get('notation')] = {
-                    'latitude': station.get('lat'),
+                    'latitude': station.get('longitude'),
                     'longitude': station.get('long')
                 }
     return eng_station_data
@@ -29,29 +26,61 @@ def get_rainfall_data_eng():
         return eng_data['items']
     return []
 
-# Function to fetch station data with coordinates for Scotland
-def fetch_station_data_sco():
-    sco_url = "https://www2.sepa.org.uk/rainfall/api/Stations"
-    sco_response = requests.get(sco_url)
-    sco_station_data = {}
-    if sco_response.status_code == 200:
-        sco_stations = sco_response.json()
-        for station in sco_stations:
-            if station.get('station_latitude') is not None and station.get('station_longitude') is not None:
-                sco_station_data[station['station_no']] = {
-                    'latitude': station.get('station_latitude'),
-                    'longitude': station.get('station_longitude')
-                }
-    return sco_station_data
-
-
+# Function to fetch station data with rainfall measurements for Wales
+def get_wales_rainfall_data(api_key):
+    url = 'https://api.naturalresources.wales/rivers-and-seas/v1/api/StationData'
+    headers = {'Ocp-Apim-Subscription-Key': api_key}
+    response = requests.get(url, headers=headers)
+    wales_rainfall_data = []
+    if response.status_code == 200:
+        wales_data = response.json()
+        for station in wales_data:
+            if station['coordinates']['latitude'] is not None and station['coordinates']['longitude'] is not None:
+                station_id = station['location']
+                latitude = station['coordinates']['latitude']
+                longitude = station['coordinates']['longitude']
+                rainfall = None
+                for parameter in station['parameters']:
+                    if parameter['paramNameEN'] == 'Rainfall':
+                        rainfall = parameter['latestValue']
+                        break
+                if rainfall is not None:
+                    wales_rainfall_data.append({
+                        'station_id': station_id,
+                        'rainfall': rainfall,
+                        'latitude': latitude,
+                        'longitude': longitude
+                    })
+    return wales_rainfall_data
 
 # Fetching and processing data for England, Scotland, and Wales
 eng_station_coordinates = fetch_station_data_eng()
-eng_rainfall_data = get_rainfall_data_eng()
-wales_rainfall_data = get_wales_rainfall_data('413a14f470f64b70a010cfa3b4ed6a79')  # Replace with the actual API key for Natural Resources Wales
 
-# Combine the data
+# # Print first 10 lines of England station data
+# print("First 10 lines of England station data:")
+# for i, (station_id, station_info) in enumerate(eng_station_coordinates.items()):
+#     if i < 10:
+#         print(f"Station ID: {station_id}, Coordinates: {station_info}")
+# print()
+
+eng_rainfall_data = get_rainfall_data_eng()
+
+# # Print first 10 lines of England rainfall data
+# print("First 10 lines of England rainfall data:")
+# for i, measurement in enumerate(eng_rainfall_data[:10]):
+#     print(f"Measurement {i+1}: {measurement}")
+# print()
+
+wales_rainfall_data = get_wales_rainfall_data('413a14f470f64b70a010cfa3b4ed6a79')
+
+# # Print first 10 lines of Wales rainfall data
+# print("First 10 lines of Wales rainfall data:")
+# for i, station_data in enumerate(wales_rainfall_data[:10]):
+#     print(f"Station ID: {station_data['station_id']}, Rainfall: {station_data['rainfall']} mm")
+# print()
+
+
+# Combine the data using latitude and longitude as the key
 combined_data = []
 
 # Process and combine England data
@@ -59,18 +88,18 @@ for measurement in eng_rainfall_data:
     station_id = measurement.get('stationReference')
     rainfall = measurement.get('latestReading', {}).get('value')
     coordinates = eng_station_coordinates.get(station_id, {'latitude': None, 'longitude': None})
+    lat_long_key = (coordinates['latitude'], coordinates['longitude'])
     if coordinates['latitude'] is not None and coordinates['longitude'] is not None:
-        combined_data.append([station_id, rainfall, coordinates['latitude'], coordinates['longitude'], 'England'])
-
+        combined_data.append([lat_long_key, rainfall, 'England'])
 
 # Process and combine Wales data
 for station_data in wales_rainfall_data:
-    station_id = station_data['station_id']
     rainfall = station_data['rainfall']
     latitude = station_data['latitude']
     longitude = station_data['longitude']
+    lat_long_key = (latitude, longitude)
     if latitude is not None and longitude is not None:
-        combined_data.append([station_id, rainfall, latitude, longitude, 'Wales'])
+        combined_data.append([lat_long_key, rainfall, 'Wales'])
 
 # Update existing CSV with rainfall data
 filename = "eng_wales.csv"
@@ -78,15 +107,17 @@ with open(filename, mode='r', newline='', encoding='utf-8') as file:
     reader = csv.DictReader(file)
     existing_data = list(reader)
 
-# Create a mapping of station ID to index in existing data
-station_id_to_index = {row['station_id']: index for index, row in enumerate(existing_data)}
+# Create a mapping of latitude and longitude to index in existing data
+lat_long_to_index = {(float(row['lat']), float(row['long'])): index for index, row in enumerate(existing_data)}
 
 # Update the rainfall_mm column
 for data_row in combined_data:
-    station_id = data_row[0]
+    lat_long_key = data_row[0]
     rainfall = data_row[1]
-    if station_id in station_id_to_index and rainfall is not None:
-        existing_data[station_id_to_index[station_id]]['rainfall_mm'] = rainfall
+    if lat_long_key in lat_long_to_index and rainfall is not None:
+        existing_data[lat_long_to_index[lat_long_key]]['rainfall_mm'] = rainfall
+
+
 
 # Write the updated data back to the CSV
 with open(filename, mode='w', newline='', encoding='utf-8') as file:
