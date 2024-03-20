@@ -23,6 +23,7 @@ jobs:
       - name: install deps
         run: |
           pip install requests
+          pip install csv
       - name: execute python script
         run: |
           python scripts/api.py
