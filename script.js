@@ -44,7 +44,7 @@ function getGradientFillColor(baseColor) {
 }
 
 function loadAndProcessCSV() {
-    Papa.parse('eng_wales.csv', {
+    Papa.parse('coordinates_rainfall_data.csv', {
         download: true,
         header: true,
         complete: function(results) {
