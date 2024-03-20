@@ -2,6 +2,13 @@ import requests
 import csv
 from datetime import datetime
 
+# Function to safely convert to float
+def safe_float_convert(value, default=None):
+    try:
+        return float(value)
+    except (ValueError, TypeError):
+        return default
+
 # Function to fetch station data with coordinates for England
 def fetch_station_data_eng():
     url = 'https://environment.data.gov.uk/flood-monitoring/id/stations?parameter=rainfall'
@@ -10,9 +17,9 @@ def fetch_station_data_eng():
     if response.status_code == 200:
         data = response.json()
         for station in data['items']:
-            if station.get('latitude') is not None and station.get('longitude') is not None:
+            if station.get('lat') is not None and station.get('long') is not None:
                 eng_station_data[station.get('notation')] = {
-                    'latitude': station.get('longitude'),
+                    'latitude': station.get('lat'),
                     'longitude': station.get('long')
                 }
     return eng_station_data
@@ -25,6 +32,33 @@ def get_rainfall_data_eng():
         eng_data = eng_response.json()
         return eng_data['items']
     return []
+
+# Function to fetch station data with coordinates for Scotland
+def fetch_station_data_sco():
+    sco_url = "https://www2.sepa.org.uk/rainfall/api/Stations"
+    sco_response = requests.get(sco_url)
+    sco_station_data = {}
+    if sco_response.status_code == 200:
+        sco_stations = sco_response.json()
+        for station in sco_stations:
+            # Convert latitude and longitude to float
+            latitude = safe_float_convert(station.get('station_latitude'))
+            longitude = safe_float_convert(station.get('station_longitude'))
+            if latitude is not None and longitude is not None:
+                sco_station_data[station['station_no']] = {
+                    'latitude': latitude,
+                    'longitude': longitude
+                }
+    return sco_station_data
+
+
+# Function to fetch latest hourly rainfall data for Scotland
+def get_rainfall_data_sco(station_id):
+    sco_url = f"https://www2.sepa.org.uk/rainfall/api/Hourly/{station_id}?all=true"
+    sco_response = requests.get(sco_url)
+    if sco_response.status_code == 200 and sco_response.json():
+        return sco_response.json()[-1]
+    return None
 
 # Function to fetch station data with rainfall measurements for Wales
 def get_wales_rainfall_data(api_key):
@@ -55,30 +89,10 @@ def get_wales_rainfall_data(api_key):
 
 # Fetching and processing data for England, Scotland, and Wales
 eng_station_coordinates = fetch_station_data_eng()
-
-# # Print first 10 lines of England station data
-# print("First 10 lines of England station data:")
-# for i, (station_id, station_info) in enumerate(eng_station_coordinates.items()):
-#     if i < 10:
-#         print(f"Station ID: {station_id}, Coordinates: {station_info}")
-# print()
-
 eng_rainfall_data = get_rainfall_data_eng()
-
-# # Print first 10 lines of England rainfall data
-# print("First 10 lines of England rainfall data:")
-# for i, measurement in enumerate(eng_rainfall_data[:10]):
-#     print(f"Measurement {i+1}: {measurement}")
-# print()
-
-wales_rainfall_data = get_wales_rainfall_data('413a14f470f64b70a010cfa3b4ed6a79')
-
-# # Print first 10 lines of Wales rainfall data
-# print("First 10 lines of Wales rainfall data:")
-# for i, station_data in enumerate(wales_rainfall_data[:10]):
-#     print(f"Station ID: {station_data['station_id']}, Rainfall: {station_data['rainfall']} mm")
-# print()
-
+sco_station_coordinates = fetch_station_data_sco()
+sco_rainfall_data = {station_id: get_rainfall_data_sco(station_id) for station_id in sco_station_coordinates}
+wales_rainfall_data = get_wales_rainfall_data('413a14f470f64b70a010cfa3b4ed6a79')  # Replace with actual API key
 
 # Combine the data using latitude and longitude as the key
 combined_data = []
@@ -86,15 +100,25 @@ combined_data = []
 # Process and combine England data
 for measurement in eng_rainfall_data:
     station_id = measurement.get('stationReference')
-    rainfall = measurement.get('latestReading', {}).get('value')
+    rainfall = safe_float_convert(measurement.get('latestReading', {}).get('value'))
     coordinates = eng_station_coordinates.get(station_id, {'latitude': None, 'longitude': None})
     lat_long_key = (coordinates['latitude'], coordinates['longitude'])
     if coordinates['latitude'] is not None and coordinates['longitude'] is not None:
         combined_data.append([lat_long_key, rainfall, 'England'])
 
+# Process and combine Scotland data
+# Process and combine Scotland data
+for station_id, coordinates in sco_station_coordinates.items():
+    sco_rainfall = get_rainfall_data_sco(station_id)
+    if sco_rainfall:
+        rainfall = safe_float_convert(sco_rainfall.get('Value'))
+        lat_long_key = (coordinates['latitude'], coordinates['longitude'])
+        if coordinates['latitude'] is not None and coordinates['longitude'] is not None:
+            combined_data.append([lat_long_key, rainfall, 'Scotland'])
+
 # Process and combine Wales data
 for station_data in wales_rainfall_data:
-    rainfall = station_data['rainfall']
+    rainfall = safe_float_convert(station_data['rainfall'])
     latitude = station_data['latitude']
     longitude = station_data['longitude']
     lat_long_key = (latitude, longitude)
@@ -102,20 +126,25 @@ for station_data in wales_rainfall_data:
         combined_data.append([lat_long_key, rainfall, 'Wales'])
 
 # Update existing CSV with rainfall data
-with open('web/data/eng_wales.csv', mode='r', newline='', encoding='utf-8') as file:
+filename = "coordinates_rainfall_data.csv"
+with open(filename, mode='r', newline='', encoding='utf-8') as file:
     reader = csv.DictReader(file)
     existing_data = list(reader)
 
 # Create a mapping of latitude and longitude to index in existing data
 lat_long_to_index = {(float(row['lat']), float(row['long'])): index for index, row in enumerate(existing_data)}
 
-# Update the rainfall_mm column
+# for data_row in combined_data:
+#     lat_long_key = data_row[0]
+#     rainfall = data_row[1]
+#     if lat_long_key in lat_long_to_index and rainfall is not None:
+#         existing_data[lat_long_to_index[lat_long_key]]['rainfall_mm'] = rainfall
+
 for data_row in combined_data:
     lat_long_key = data_row[0]
     rainfall = data_row[1]
     if lat_long_key in lat_long_to_index and rainfall is not None:
         existing_data[lat_long_to_index[lat_long_key]]['rainfall_mm'] = rainfall
-
 
 # Write the updated data back to the CSV
 with open(filename, mode='w', newline='', encoding='utf-8') as file:
@@ -123,24 +152,40 @@ with open(filename, mode='w', newline='', encoding='utf-8') as file:
     writer.writeheader()
     writer.writerows(existing_data)
 
-# Now calculate and update the county_avg
-# Calculate county rainfall totals and counts
+# Calculate and update the county_avg
 county_rainfall = {}
 for row in existing_data:
     county = row['county']
-    rainfall = float(row['rainfall_mm']) if row['rainfall_mm'] else 0
+    rainfall = safe_float_convert(row['rainfall_mm'], default=0)
     if county not in county_rainfall:
         county_rainfall[county] = {'total_rainfall': 0, 'count': 0}
     county_rainfall[county]['total_rainfall'] += rainfall
     county_rainfall[county]['count'] += 1
 
-# Calculate averages and update the county_avg column
 for county, data in county_rainfall.items():
     data['average_rainfall'] = "{:.2f}".format(data['total_rainfall'] / data['count']) if data['count'] > 0 else "0.00"
 
 for row in existing_data:
     county = row['county']
     row['county_avg'] = county_rainfall[county]['average_rainfall']
+
+# Calculate and update the country_avg
+country_rainfall = {}
+for data_row in combined_data:
+    country = data_row[2]  # Assuming country is the third element in the data row
+    rainfall = data_row[1]
+    if country not in country_rainfall:
+        country_rainfall[country] = {'total_rainfall': 0, 'count': 0}
+    country_rainfall[country]['total_rainfall'] += rainfall if rainfall is not None else 0
+    country_rainfall[country]['count'] += 1 if rainfall is not None else 0
+
+for country, data in country_rainfall.items():
+    data['average_rainfall'] = "{:.2f}".format(data['total_rainfall'] / data['count']) if data['count'] > 0 else "0.00"
+
+for row in existing_data:
+    country = row['country']  # Assuming there is a 'country' column in your CSV
+    row['country_avg'] = country_rainfall[country]['average_rainfall'] if country in country_rainfall else "0.00"
+
 
 # Write the final updated data back to the CSV
 with open(filename, mode='w', newline='', encoding='utf-8') as file:
